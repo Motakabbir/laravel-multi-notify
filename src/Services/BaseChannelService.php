@@ -103,4 +103,16 @@ abstract class BaseChannelService implements NotificationGateway
     {
         $this->defaultGateway = $name;
     }
+
+    /**
+     * Get a gateway instance
+     *
+     * @param string|null $name
+     * @return NotificationGateway
+     * @throws ChannelNotFoundException
+     */
+    public function getGatewayInstance(?string $name = null): NotificationGateway
+    {
+        return $this->makeGateway($name);
+    }
 }

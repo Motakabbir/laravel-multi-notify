@@ -9,9 +9,12 @@ use LaravelMultiNotify\Jobs\SendPushJob;
 use LaravelMultiNotify\Jobs\SendSmsJob;
 use LaravelMultiNotify\Jobs\SendEmailJob;
 use Illuminate\Container\Container;
+use LaravelMultiNotify\Traits\NotificationLoggable;
 
 class MultiNotifyService extends Manager
 {
+    use NotificationLoggable;
+
     protected $smsService;
     protected $pushService;
     protected $emailService;
@@ -51,19 +54,14 @@ class MultiNotifyService extends Manager
      */
     public function sms($to, array $data, ?string $gateway = null, bool $queue = true): array
     {
-        try {
-            if ($queue) {
-                dispatch(new SendSmsJob($to, $data, $gateway));
-                return ['queued' => true];
-            }
+        $gateway = $gateway ?? config('multi-notify.sms.default');
 
-            return $this->smsService->send($to, $data, $gateway);
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
+        if ($queue) {
+            dispatch(new SendSmsJob($to, $data, $gateway));
+            return ['queued' => true, 'recipients' => $to];
         }
+
+        return $this->smsService->send($to, $data, $gateway);
     }
 
     /**
@@ -77,19 +75,14 @@ class MultiNotifyService extends Manager
      */
     public function push($to, array $data, ?string $service = null, bool $queue = true): array
     {
-        try {
-            if ($queue) {
-                dispatch(new SendPushJob($to, $data, $service));
-                return ['queued' => true];
-            }
+        $service = $service ?? config('multi-notify.push.default');
 
-            return $this->pushService->send($to, $data, $service);
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
+        if ($queue) {
+            dispatch(new SendPushJob($to, $data, $service));
+            return ['queued' => true, 'recipients' => $to];
         }
+
+        return $this->pushService->send($to, $data, $service);
     }
 
     /**
@@ -102,19 +95,14 @@ class MultiNotifyService extends Manager
      */
     public function email($to, array $data, bool $queue = true): array
     {
-        try {
-            if ($queue) {
-                dispatch(new SendEmailJob($to, $data));
-                return ['queued' => true];
-            }
+        $gateway = config('multi-notify.email.default');
 
-            return $this->emailService->send($to, $data);
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
+        if ($queue) {
+            dispatch(new SendEmailJob($to, $data, $gateway));
+            return ['queued' => true, 'recipients' => $to];
         }
+
+        return $this->emailService->send($to, $data, $gateway);
     }
 
     /**
@@ -137,7 +125,6 @@ class MultiNotifyService extends Manager
                 throw new ChannelNotFoundException("Channel [{$channel}] not found");
         }
     }
-
     /**
      * Get the gateway instance for a channel
      *
@@ -145,11 +132,11 @@ class MultiNotifyService extends Manager
      * @param string|null $name
      * @return NotificationGateway
      * @throws ChannelNotFoundException
-     */    
+     */
     protected function gateway(string $channel, ?string $name = null): NotificationGateway
     {
         $channelService = $this->channel($channel);
-        return $channelService->makeGateway($name);
+        return $channelService->getGatewayInstance($name);
     }
 
     /**
@@ -172,27 +159,5 @@ class MultiNotifyService extends Manager
         }
 
         throw new ChannelNotFoundException("Driver [{$driver}] not supported.");
-    }
-
-    /**
-     * Get the channel service instance for the given channel
-     *
-     * @param  string  $name
-     * @return BaseChannelService
-     */
-    public function channel(string $name): BaseChannelService
-    {
-        return $this->channel($name);
-    }
-
-    /**
-     * Get the default gateway name for a channel
-     *
-     * @param  string  $channel
-     * @return string|null
-     */
-    public function getDefaultGateway(string $channel): ?string
-    {
-        return config("multi-notify.{$channel}.default");
     }
 }

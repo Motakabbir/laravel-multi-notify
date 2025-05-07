@@ -5,7 +5,7 @@ namespace LaravelMultiNotify\Gateways\Push;
 use LaravelMultiNotify\Contracts\NotificationGateway;
 use Kreait\Firebase\Factory;
 use Kreait\Firebase\Messaging\CloudMessage;
-use Kreait\Firebase\Messaging as FirebaseMessaging;
+use Kreait\Firebase\Messaging\Messaging;
 use Kreait\Firebase\Exception\MessagingException;
 use LaravelMultiNotify\Traits\NotificationLoggable;
 use InvalidArgumentException;
@@ -43,8 +43,7 @@ class FirebaseGateway implements NotificationGateway
 
     /**
      * Set the messaging service (useful for testing)
-     */
-    public function setMessaging(FirebaseMessaging $messaging): void
+     */    public function setMessaging(Messaging $messaging): void
     {
         $this->messaging = $messaging;
     }
@@ -222,13 +221,12 @@ class FirebaseGateway implements NotificationGateway
     {
         $message = CloudMessage::withTarget('token', $token)
             ->withNotification($notification);
-
         if (!empty($data['data'])) {
             $message = $message->withData($data['data']);
         }
 
         if (!empty($data['priority'])) {
-            $message = $message->withPriority($data['priority']);
+            $message = $message->withHighPriority($data['priority'] === 'high');
         }
 
         if (isset($data['ttl'])) {
