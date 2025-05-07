@@ -18,17 +18,16 @@ class NotificationIntegrationTest extends TestCase
         parent::setUp();
         Queue::fake();
     }
-
     /** @test */
     public function it_properly_queues_sms_notifications()
     {
         $recipient = '1234567890';
-        $message = 'Test message';
+        $data = ['message' => 'Test message'];
         $gateway = 'twilio';
 
         Config::set('multi-notify.sms.default', $gateway);
 
-        MultiNotify::sms($recipient, $message);
+        MultiNotify::sms($recipient, $data);
 
         Queue::assertPushed(SendSmsJob::class, function ($job) use ($recipient, $message, $gateway) {
             return $job->to === $recipient &&
@@ -36,14 +35,13 @@ class NotificationIntegrationTest extends TestCase
                 $job->gateway === $gateway;
         });
     }
-
     /** @test */
     public function it_properly_queues_bulk_sms_notifications()
     {
         $recipients = ['1234567890', '0987654321'];
-        $message = 'Test message';
+        $data = ['message' => 'Test message'];
 
-        MultiNotify::sms($recipients, $message);
+        MultiNotify::sms($recipients, $data);
 
         Queue::assertPushed(SendSmsJob::class, function ($job) use ($recipients, $message) {
             return $job->to === $recipients &&

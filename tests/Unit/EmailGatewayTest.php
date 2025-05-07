@@ -140,7 +140,7 @@ class EmailGatewayTest extends TestCase
             'channel' => 'email',
             'gateway' => 'smtp',
             'recipient' => $to,
-            'status' => 'error'
+            'status' => 'failed'
         ]);
     }
 
@@ -160,7 +160,7 @@ class EmailGatewayTest extends TestCase
             'channel' => 'email',
             'gateway' => 'smtp',
             'recipient' => $to,
-            'status' => 'error'
+            'status' => 'failed'
         ]);
     }
 

@@ -75,14 +75,18 @@ class MultiNotifyService extends Manager
      */
     public function push($to, array $data, ?string $service = null, bool $queue = true): array
     {
+        if (!isset($data['title'])) {
+            return ['success' => false, 'error' => 'Push notification title is required'];
+        }
+
         $service = $service ?? config('multi-notify.push.default');
 
         if ($queue) {
             dispatch(new SendPushJob($to, $data, $service));
-            return ['queued' => true, 'recipients' => $to];
+            return ['success' => true, 'queued' => true, 'recipients' => $to];
         }
 
-        return $this->pushService->send($to, $data, $service);
+        return array_merge(['success' => true], $this->pushService->send($to, $data, $service));
     }
 
     /**
