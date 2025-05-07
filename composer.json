@@ -1,5 +1,5 @@
 {
-    "name": "vendor/laravel-multi-notify",
+    "name": "motakabbir/laravel-multi-notify",
     "description": "A Laravel package for sending notifications via multiple channels including SMS, email, Pusher, Firebase and various SMS gateways",
     "type": "library",
     "license": "MIT",
