@@ -1,0 +1,58 @@
+{
+    "name": "vendor/laravel-multi-notify",
+    "description": "A Laravel package for sending notifications via multiple channels including SMS, email, Pusher, Firebase and various SMS gateways",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Motakabbir Morshed",
+            "email": "dolardx@gmail.com",
+            "homepage": "https://github.com/Motakabbir"
+        }
+    ],
+    "require": {
+        "php": "^8.0",
+        "laravel/framework": "^8.0|^9.0|^10.0",
+        "illuminate/support": "^8.0|^9.0|^10.0",
+        "illuminate/notifications": "^8.0|^9.0|^10.0",
+        "illuminate/queue": "^8.0|^9.0|^10.0",
+        "illuminate/database": "^8.0|^9.0|^10.0",
+        "guzzlehttp/guzzle": "^7.0",
+        "aws/aws-sdk-php": "^3.0",
+        "twilio/sdk": "^6.0",
+        "mediaburst/clockworksms": "^2.0",
+        "sms77/api": "^2.0",
+        "pusher/pusher-php-server": "^7.0",
+        "kreait/firebase-php": "^7.18"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^6.0|^7.0|^8.0",
+        "phpunit/phpunit": "^9.0|^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "LaravelMultiNotify\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "LaravelMultiNotify\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "LaravelMultiNotify\\MultiNotifyServiceProvider"
+            ],
+            "aliases": {
+                "MultiNotify": "LaravelMultiNotify\\Facades\\MultiNotify"
+            }
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "test-coverage": "vendor/bin/phpunit --coverage-html coverage"
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
