@@ -22,7 +22,8 @@ class NotificationIntegrationTest extends TestCase
     public function it_properly_queues_sms_notifications()
     {
         $recipient = '1234567890';
-        $data = ['message' => 'Test message'];
+        $message = 'Test message';
+        $data = ['message' => $message];
         $gateway = 'twilio';
 
         Config::set('multi-notify.sms.default', $gateway);
@@ -39,20 +40,27 @@ class NotificationIntegrationTest extends TestCase
     public function it_properly_queues_bulk_sms_notifications()
     {
         $recipients = ['1234567890', '0987654321'];
-        $data = ['message' => 'Test message'];
+        $message = 'Test message';
+        $data = ['message' => $message];
+        $gateway = 'twilio';
+
+        Config::set('multi-notify.sms.default', $gateway);
 
         MultiNotify::sms($recipients, $data);
 
-        Queue::assertPushed(SendSmsJob::class, function ($job) use ($recipients, $message) {
+        Queue::assertPushed(SendSmsJob::class, function ($job) use ($recipients, $data, $gateway) {
             return $job->to === $recipients &&
-                $job->data['message'] === $message;
+                $job->data === $data &&
+                $job->gateway === $gateway;
         });
 
         foreach ($recipients as $recipient) {
-            $this->assertDatabaseHas('notification_logs', [
+            $this->assertLogExists([
                 'channel' => 'sms',
                 'recipient' => $recipient,
-                'content' => json_encode(['message' => $message])
+                'content' => $data,
+                'status' => 'queued',
+                'gateway' => $gateway
             ]);
         }
     }
@@ -175,10 +183,9 @@ class NotificationIntegrationTest extends TestCase
 
     /** @test */
     public function it_respects_configured_defaults()
-    {
-        // Test SMS default gateway
+    {        // Test SMS default gateway
         Config::set('multi-notify.sms.default', 'twilio');
-        MultiNotify::sms('1234567890', 'Test');
+        MultiNotify::sms('1234567890', ['message' => 'Test']);
         Queue::assertPushed(SendSmsJob::class, function ($job) {
             return $job->gateway === 'twilio';
         });

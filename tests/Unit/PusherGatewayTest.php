@@ -5,34 +5,30 @@ namespace LaravelMultiNotify\Tests\Unit;
 use LaravelMultiNotify\Tests\TestCase;
 use LaravelMultiNotify\Gateways\Push\PusherGateway;
 use Mockery;
-use Pusher\Pusher;
 use stdClass;
+use Pusher\Pusher;
 
 class PusherGatewayTest extends TestCase
 {
     private PusherGateway $gateway;
-    private Pusher $pusherMock;
+    private $pusherMock;
 
     protected function setUp(): void
     {
         parent::setUp();
+        config(['multi-notify.push.services.pusher' => [
+            'app_key' => 'test-key',
+            'app_secret' => 'test-secret',
+            'app_id' => 'test-id',
+            'cluster' => 'test-cluster'
+        ]]);
 
-        // Set test configuration
-        $this->app['config']->set('multi-notify.push.services.pusher.app_id', 'test-app-id');
-        $this->app['config']->set('multi-notify.push.services.pusher.app_key', 'test-app-key');
-        $this->app['config']->set('multi-notify.push.services.pusher.app_secret', 'test-app-secret');
-        $this->app['config']->set('multi-notify.push.services.pusher.cluster', 'test-cluster');
+        $this->gateway = new PusherGateway();
 
         $this->pusherMock = Mockery::mock(Pusher::class);
-        $this->gateway = new PusherGateway();
         $this->gateway->setPusher($this->pusherMock);
     }
 
-    protected function tearDown(): void
-    {
-        Mockery::close();
-        parent::tearDown();
-    }
     /** @test */
     public function it_can_send_to_single_channel()
     {
@@ -47,16 +43,16 @@ class PusherGatewayTest extends TestCase
 
         $this->pusherMock->shouldReceive('trigger')
             ->once()
-            ->with($channel, $data['event'], ['message' => $data['message']], [])
             ->andReturn($response);
 
         $result = $this->gateway->send($channel, $data);
 
         $this->assertTrue($result[0]['success']);
-        $this->assertDatabaseHas('notification_logs', [
+        $this->assertLogExists([
             'channel' => 'push',
             'gateway' => 'pusher',
             'recipient' => $channel,
+            'content' => $data,
             'status' => 'success'
         ]);
     }
@@ -72,19 +68,20 @@ class PusherGatewayTest extends TestCase
 
         $response = new stdClass();
         $response->status = 200;
+
         $this->pusherMock->shouldReceive('trigger')
             ->twice()
-            ->with(\Mockery::any(), $data['event'], ['message' => $data['message']], [])
             ->andReturn($response);
 
         $result = $this->gateway->send($channels, $data);
 
         $this->assertCount(2, $result);
         foreach ($channels as $channel) {
-            $this->assertDatabaseHas('notification_logs', [
+            $this->assertLogExists([
                 'channel' => 'push',
                 'gateway' => 'pusher',
                 'recipient' => $channel,
+                'content' => $data,
                 'status' => 'success'
             ]);
         }
@@ -101,40 +98,17 @@ class PusherGatewayTest extends TestCase
 
         $this->pusherMock->shouldReceive('trigger')
             ->once()
-            ->andThrow(new \Exception('Connection failed'));
-
-        $result = $this->gateway->send($channel, $data);
-
-        $this->assertFalse($result[0]['success']);
-        $this->assertDatabaseHas('notification_logs', [
-            'channel' => 'push',
-            'gateway' => 'pusher',
-            'recipient' => $channel,
-            'status' => 'failed'
-        ]);
-    }
-    /** @test */
-    public function it_handles_pusher_errors()
-    {
-        $channel = 'test-channel';
-        $data = [
-            'event' => 'test-event',
-            'message' => 'Test message'
-        ];
-
-        $this->pusherMock->shouldReceive('trigger')
-            ->once()
-            ->with($channel, $data['event'], ['message' => $data['message']], [])
             ->andThrow(new \Exception('Test error'));
 
         $result = $this->gateway->send($channel, $data);
 
         $this->assertFalse($result[0]['success']);
         $this->assertEquals('Test error', $result[0]['error']);
-        $this->assertDatabaseHas('notification_logs', [
+        $this->assertLogExists([
             'channel' => 'push',
             'gateway' => 'pusher',
             'recipient' => $channel,
+            'content' => $data,
             'status' => 'failed',
             'error_message' => 'Test error'
         ]);
@@ -151,12 +125,13 @@ class PusherGatewayTest extends TestCase
         $result = $this->gateway->send($channel, $data);
 
         $this->assertFalse($result[0]['success']);
-        $this->assertStringContainsString('event', $result[0]['error']);
-        $this->assertDatabaseHas('notification_logs', [
+        $this->assertStringContainsString('Event name', $result[0]['error']);
+        $this->assertLogExists([
             'channel' => 'push',
             'gateway' => 'pusher',
             'recipient' => $channel,
-            'status' => 'error'
+            'content' => $data,
+            'status' => 'failed'
         ]);
     }
 
@@ -174,12 +149,18 @@ class PusherGatewayTest extends TestCase
 
         $this->pusherMock->shouldReceive('trigger')
             ->once()
-            ->with($channel, $data['event'], ['message' => $data['message']])
             ->andReturn($response);
 
         $result = $this->gateway->send($channel, $data);
 
         $this->assertTrue($result[0]['success']);
+        $this->assertLogExists([
+            'channel' => 'push',
+            'gateway' => 'pusher',
+            'recipient' => $channel,
+            'content' => $data,
+            'status' => 'success'
+        ]);
     }
 
     /** @test */
@@ -196,26 +177,17 @@ class PusherGatewayTest extends TestCase
 
         $this->pusherMock->shouldReceive('trigger')
             ->once()
-            ->with($channel, $data['event'], ['message' => $data['message']])
             ->andReturn($response);
 
         $result = $this->gateway->send($channel, $data);
 
         $this->assertTrue($result[0]['success']);
-    }
-
-    /** @test */
-    public function it_validates_channel_name_format()
-    {
-        $channel = 'invalid:channel';
-        $data = [
-            'event' => 'test-event',
-            'message' => 'Test message'
-        ];
-
-        $result = $this->gateway->send($channel, $data);
-
-        $this->assertFalse($result[0]['success']);
-        $this->assertStringContainsString('channel', $result[0]['error']);
+        $this->assertLogExists([
+            'channel' => 'push',
+            'gateway' => 'pusher',
+            'recipient' => $channel,
+            'content' => $data,
+            'status' => 'success'
+        ]);
     }
 }

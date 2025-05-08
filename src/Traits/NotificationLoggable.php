@@ -11,11 +11,22 @@ trait NotificationLoggable
         if ($status === 'error') {
             $status = 'failed';
         }
+
+        // Handle content array to prevent double-encoding
+        if (is_array($content)) {
+            $content = json_encode($content);
+        }
+
+        // Handle response array to prevent double-encoding
+        if (is_array($response)) {
+            $response = json_encode($response);
+        }
+
         return NotificationLog::create([
             'channel' => $channel,
             'gateway' => $gateway,
-            'recipient' => is_array($recipient) ? json_encode($recipient) : $recipient,
-            'content' => is_string($content) ? $content : json_encode($content),
+            'recipient' => $recipient,
+            'content' => $content,
             'response' => $response,
             'status' => $status,
             'error_message' => $error

@@ -17,9 +17,8 @@ class NotificationLog extends Model
         'status',
         'error_message'
     ];
-
     protected $casts = [
-        'content' => 'array',
-        'response' => 'array'
+        'content' => 'json',
+        'response' => 'json'
     ];
 }

@@ -27,8 +27,8 @@ class NotificationLogTest extends TestCase
             'channel' => 'sms',
             'gateway' => 'twilio',
             'recipient' => '1234567890',
-            'content' => json_encode(['message' => 'Test message']),
-            'response' => json_encode(['status' => 'delivered']),
+            'content' => ['message' => 'Test message'],
+            'response' => ['status' => 'delivered'],
             'status' => 'success',
             'error_message' => null
         ]);
@@ -159,20 +159,19 @@ class NotificationLogTest extends TestCase
         $this->assertEquals('firebase', $firebaseLogs->first()->gateway);
         $this->assertEquals('pusher', $pusherLogs->first()->gateway);
     }
-
     /** @test */
     public function it_can_filter_by_date_range()
     {
-        $yesterday = now()->subDay();
-        $today = now();
-        $tomorrow = now()->addDay();
+        $yesterday = now()->subDay()->startOfDay();
+        $today = now()->startOfDay();
+        $tomorrow = now()->addDay()->startOfDay();
 
         NotificationLog::create([
             'channel' => 'sms',
             'gateway' => 'twilio',
             'recipient' => '1234567890',
             'content' => ['message' => 'Past'],
-            'created_at' => $yesterday,
+            'created_at' => $yesterday->copy()->addHours(12),
             'status' => 'success'
         ]);
 
@@ -181,7 +180,7 @@ class NotificationLogTest extends TestCase
             'gateway' => 'twilio',
             'recipient' => '1234567890',
             'content' => ['message' => 'Present'],
-            'created_at' => $today,
+            'created_at' => $today->copy()->addHours(12),
             'status' => 'success'
         ]);
 
@@ -190,11 +189,11 @@ class NotificationLogTest extends TestCase
             'gateway' => 'twilio',
             'recipient' => '1234567890',
             'content' => ['message' => 'Future'],
-            'created_at' => $tomorrow,
+            'created_at' => $tomorrow->copy()->addHours(12),
             'status' => 'success'
         ]);
 
-        $logs = NotificationLog::whereBetween('created_at', [$yesterday, $today])->get();
+        $logs = NotificationLog::whereBetween('created_at', [$yesterday->startOfDay(), $today->endOfDay()])->get();
 
         $this->assertEquals(2, $logs->count());
     }

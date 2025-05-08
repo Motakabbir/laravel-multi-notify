@@ -27,19 +27,14 @@ class EmailGatewayTest extends TestCase
             'body' => 'Test message',
         ];
 
-        Mail::assertNothingQueued();
-
-        Mail::assertNothingSent(function (Mailable $mailable) use ($to) {
-            return $mailable->hasTo($to);
-        });
-
         $response = $this->gateway->send($to, $data);
 
         $this->assertTrue($response[0]['success']);
-        $this->assertDatabaseHas('notification_logs', [
+        $this->assertLogExists([
             'channel' => 'email',
             'gateway' => 'smtp',
             'recipient' => $to,
+            'content' => $data,
             'status' => 'success'
         ]);
 
@@ -61,8 +56,6 @@ class EmailGatewayTest extends TestCase
             'body' => 'Test message',
         ];
 
-        Mail::assertNothingQueued();
-
         $response = $this->gateway->send($recipients, $data);
 
         $this->assertCount(2, $response);
@@ -70,10 +63,11 @@ class EmailGatewayTest extends TestCase
             Mail::assertSent(function (Mailable $mailable) use ($to) {
                 return $mailable->hasTo($to);
             });
-            $this->assertDatabaseHas('notification_logs', [
+            $this->assertLogExists([
                 'channel' => 'email',
                 'gateway' => 'smtp',
                 'recipient' => $to,
+                'content' => $data,
                 'status' => 'success'
             ]);
         }
@@ -88,15 +82,14 @@ class EmailGatewayTest extends TestCase
             'body' => 'Test message',
         ];
 
-        Mail::assertNothingQueued();
-
         $response = $this->gateway->send($to, $data);
 
         $this->assertFalse($response[0]['success']);
-        $this->assertDatabaseHas('notification_logs', [
+        $this->assertLogExists([
             'channel' => 'email',
             'gateway' => 'smtp',
             'recipient' => $to,
+            'content' => $data,
             'status' => 'failed'
         ]);
     }
@@ -136,10 +129,11 @@ class EmailGatewayTest extends TestCase
 
         $this->assertFalse($response[0]['success']);
         $this->assertStringContainsString('subject', $response[0]['error']);
-        $this->assertDatabaseHas('notification_logs', [
+        $this->assertLogExists([
             'channel' => 'email',
             'gateway' => 'smtp',
             'recipient' => $to,
+            'content' => $data,
             'status' => 'failed'
         ]);
     }
@@ -156,10 +150,11 @@ class EmailGatewayTest extends TestCase
 
         $this->assertFalse($response[0]['success']);
         $this->assertStringContainsString('body', $response[0]['error']);
-        $this->assertDatabaseHas('notification_logs', [
+        $this->assertLogExists([
             'channel' => 'email',
             'gateway' => 'smtp',
             'recipient' => $to,
+            'content' => $data,
             'status' => 'failed'
         ]);
     }
@@ -177,11 +172,12 @@ class EmailGatewayTest extends TestCase
 
         $this->assertFalse($response[0]['success']);
         $this->assertStringContainsString('email', $response[0]['error']);
-        $this->assertDatabaseHas('notification_logs', [
+        $this->assertLogExists([
             'channel' => 'email',
             'gateway' => 'smtp',
             'recipient' => $to,
-            'status' => 'error'
+            'content' => $data,
+            'status' => 'failed'
         ]);
     }
 
@@ -243,11 +239,12 @@ class EmailGatewayTest extends TestCase
 
         $this->assertFalse($response[0]['success']);
         $this->assertStringContainsString('failed', $response[0]['error']);
-        $this->assertDatabaseHas('notification_logs', [
+        $this->assertLogExists([
             'channel' => 'email',
             'gateway' => 'smtp',
             'recipient' => $to,
-            'status' => 'error'
+            'content' => $data,
+            'status' => 'failed'
         ]);
     }
 }

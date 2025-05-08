@@ -28,9 +28,13 @@ class FirebaseGateway implements NotificationGateway
     use NotificationLoggable;
 
     protected $messaging;
-
-    public function __construct()
+    public function __construct(Messaging $messaging = null)
     {
+        if ($messaging !== null) {
+            $this->messaging = $messaging;
+            return;
+        }
+
         $credentialsPath = config('multi-notify.push.services.firebase.credentials');
 
         if (!file_exists($credentialsPath)) {
@@ -39,13 +43,6 @@ class FirebaseGateway implements NotificationGateway
 
         $factory = (new Factory)->withServiceAccount($credentialsPath);
         $this->messaging = $factory->createMessaging();
-    }
-
-    /**
-     * Set the messaging service (useful for testing)
-     */    public function setMessaging(Messaging $messaging): void
-    {
-        $this->messaging = $messaging;
     }
 
     /**

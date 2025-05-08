@@ -36,7 +36,7 @@ class MultiNotifyServiceTest extends TestCase
                     'default' => 'firebase',
                     'services' => [
                         'firebase' => [
-                            'credentials' => __DIR__ . '/dummy-credentials.json',
+                            'credentials' => __DIR__ . '/dummy-firebase-credentials.json',
                             'class' => \LaravelMultiNotify\Gateways\Push\FirebaseGateway::class
                         ]
                     ]
@@ -116,11 +116,16 @@ class MultiNotifyServiceTest extends TestCase
     {
         Queue::fake();
 
-        $to = 'device_token';
-        $data = ['title' => 'Test', 'body' => 'Test message'];
+        $token = 'device_token';
         $data = ['title' => 'Test', 'body' => 'Test message'];
 
-        $this->service->push($to, $data);
+        $this->service->push($token, $data);
+
+        Queue::assertPushed(SendPushJob::class, function ($job) use ($token, $data) {
+            return $job->to === $token &&
+                $job->data === $data &&
+                $job->gateway === config('multi-notify.push.default');
+        });
     }
 
     /** @test */
@@ -169,17 +174,18 @@ class MultiNotifyServiceTest extends TestCase
         $data = ['title' => 'Test'];
 
         $response = $this->service->push($to, $data, null, false);
-
-        $this->assertDatabaseHas('notification_logs', [
+        $this->assertLogExists([
             'channel' => 'push',
-            'gateway' => $defaultService
+            'gateway' => $defaultService,
+            'recipient' => $to,
+            'content' => $data
         ]);
     }
     /** @test */
     public function it_throws_exception_for_invalid_sms_gateway()
     {
         $this->expectException(ChannelNotFoundException::class);
-        $this->expectExceptionMessage("Gateway [invalid_gateway] not found for channel type [sms]");
+        $this->expectExceptionMessage("Gateway [invalid_gateway] not found for channel [sms]");
 
         $this->service->sms('1234567890', ['message' => 'Test message'], 'invalid_gateway', false);
     }
@@ -232,12 +238,11 @@ class MultiNotifyServiceTest extends TestCase
         $to = '1234567890';
         $data = ['message' => 'Test message'];
         $customGateway = 'custom-sms-gateway';
-
         $this->service->sms($to, $data, $customGateway);
 
-        Queue::assertPushed(SendSmsJob::class, function ($job) use ($to, $message, $customGateway) {
+        Queue::assertPushed(SendSmsJob::class, function ($job) use ($to, $data, $customGateway) {
             return $job->to === $to &&
-                $job->data['message'] === $message &&
+                $job->data === $data &&
                 $job->gateway === $customGateway;
         });
     }
